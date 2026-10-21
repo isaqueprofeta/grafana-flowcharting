@@ -46,6 +46,13 @@ export type RulesHandlerSignals = 'rule_created' | 'rule_updated' | 'rule_change
 export interface RulesHandlerLike {
   events: GFEvents<RulesHandlerSignals>;
   getRule(value: number | string): RuleLike | null;
+  /**
+   * The current rule set. A freshly created State reads this to ingest rules
+   * that were created before it existed (the FlowchartHandler builds rules
+   * before flowcharts/states), keeping state creation order-independent of
+   * rule creation.
+   */
+  getRules(): RuleLike[];
 }
 
 /** Minimal Rule shape referenced across handler boundaries. */

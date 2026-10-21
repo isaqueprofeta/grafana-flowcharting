@@ -21,3 +21,8 @@ coverage/
 # Signing / release artifacts
 *.zip
 *.zip.sha1
+
+# Playwright e2e artifacts
+playwright-report/
+test-results/
+playwright/.auth/

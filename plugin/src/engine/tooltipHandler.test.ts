@@ -86,6 +86,7 @@ function stubContext(): StubContext {
     rulesHandler: {
       events: rulesEvents,
       getRule: () => null,
+      getRules: () => [],
     },
   };
 }

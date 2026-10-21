@@ -75,6 +75,8 @@ export class State {
   private _rules: Map<string, Rule> = new Map();
   currRules: string[] = [];
   currMetrics: string[] = [];
+  /** Serializes concurrent `update()` calls so each init->set->apply is atomic. */
+  private _updateChain: Promise<void> = Promise.resolve();
   events: GFEvents<StateSignals> = GFEvents.create(stateSignalsArray);
 
   constructor(gf: LogicContext, xcell: XCell, xgraph: XGraph) {
@@ -113,14 +115,35 @@ export class State {
     this.gf.rulesHandler?.events.connect('rule_updated', this, this._on_ruleHandler_rule_updated.bind(this));
     this.gf.rulesHandler?.events.connect('rule_created', this, this._on_ruleHandler_rule_created.bind(this));
     this.gf.rulesHandler?.events.connect('rule_deleted', this, this._on_ruleHandler_rule_deleted.bind(this));
+    // Ingest rules that already exist when this state is created. Rules are
+    // built (and their `rule_created` events emitted) in the FlowchartHandler
+    // ctor *before* the flowcharts — and thus the per-cell states — exist, so a
+    // freshly created state would otherwise never learn about the current rule
+    // set and its `_rules` map would stay empty (no recolor on the periodic
+    // `update()` path). Binding the existing rules here makes state creation
+    // order-independent of rule creation.
+    this.gf.rulesHandler?.getRules().forEach((rule) => this._updateRule(rule as unknown as Rule));
     this.events.emit('state_initialized', this);
     return this;
   }
 
   async update() {
+    // Serialize concurrent updates. `update()` is driven by several sources
+    // (the `data_processed` bus event fans out to every state, the panel's
+    // data/options/time effects, and rule lifecycle events), so without a lock
+    // the `await` points in `_initCycle`/`_setCycle` let a second update's
+    // `_initCycle` reset `matched`/the sub-state keys *between* this update's
+    // `_setCycle` (which computed the color) and its `_applyCycle` (which
+    // commits it) — the recolor is then silently dropped. Chaining updates on a
+    // single promise keeps each init -> set -> apply cycle atomic.
+    this._updateChain = this._updateChain.then(() => this._runUpdate());
+    return this._updateChain;
+  }
+
+  private async _runUpdate() {
     await this._initCycle();
     await this._setCycle();
-    this._applyCycle();
+    await this._applyCycle();
     this.events.emit('state_updated', this);
     return;
   }
@@ -182,6 +205,7 @@ export class State {
         this._variables.set(GFCONSTANT.VAR_STR_RULENAME, r.data.alias);
         const m = Array.from(r.getMetrics().values());
         m.forEach((metric: ObjectMetric) => {
+         try {
           try {
             this.currMetrics.push(metric.getName());
             this._variables.set(GFCONSTANT.VAR_STR_METRIC, metric.getName());
@@ -288,6 +312,14 @@ export class State {
               r.highestColor = color;
             }
           }
+         } catch (error) {
+           // A failure while evaluating one metric (e.g. building a tooltip)
+           // must not abort the whole cycle: that would skip `_applyCycle` and,
+           // because `update()` chains on a single promise, poison every later
+           // update for this cell. Log and continue with the next metric so the
+           // already-computed shape color is still applied.
+           GFLog.error('Error evaluating metric for state', error);
+         }
         });
       }
       let endPerf = Date.now();

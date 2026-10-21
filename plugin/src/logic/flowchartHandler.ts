@@ -133,6 +133,21 @@ export class FlowchartHandler {
     return this;
   }
 
+  /**
+   * Resolves once every flowchart's graph and per-cell states have finished
+   * building. The graph build is async (source resolution), so the panel's
+   * data effect awaits this before its first `update()` to avoid driving a
+   * state refresh before the states exist. After the graphs are ready it
+   * rebinds the current metrics to the rules and refreshes states so the first
+   * render is colored from live data deterministically, independent of the
+   * order in which the build/data/bus events happen to interleave.
+   */
+  async whenReady(): Promise<void> {
+    await Promise.all(this.flowcharts.map((f) => f.whenReady()));
+    this.applyRules(this.options.rules);
+    this.update();
+  }
+
   /** Refresh metric values at an optional timestamp, then refresh states (time/crosshair effect). */
   refreshMetrics(timestamp?: number): this {
     this.metricHandler.refreshMetrics(timestamp);
@@ -209,6 +224,17 @@ export class FlowchartHandler {
       const legacy = ruleOptionsToLegacyData(ruleOptions);
       const rule = this.rulesHandler.addRule(ruleOptions.pattern ?? '', legacy);
       this.rulesHandler.events.emit('rule_created', rule);
+    });
+    // Bind the already-loaded metrics to the freshly built rules. Rules bind
+    // metrics by listening for `metric_created`, but that event only fires when
+    // new data arrives. This method is also called on every options change
+    // (options effect) *after* data has already loaded, so without replaying
+    // the current metrics the rebuilt rules would hold no metrics until the
+    // next data refresh and the diagram would show no data-driven color in the
+    // meantime. Re-emitting `metric_created` for each existing metric rebinds
+    // them immediately.
+    this.metricHandler.metrics.forEach((metric) => {
+      this.metricHandler.events.emit('metric_created', metric);
     });
     return this;
   }

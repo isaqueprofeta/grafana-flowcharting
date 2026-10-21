@@ -71,6 +71,8 @@ export class Flowchart {
   uid: string;
   visible = false;
   reduce = true;
+  /** Resolves once the async graph build + state handler creation has finished. */
+  private _ready: Promise<void> = Promise.resolve();
   events: GFEvents<FlowchartSignals> = GFEvents.create(flowchartSignalsArray);
 
   constructor(gf: LogicContext, name: string, container: HTMLDivElement, newData: FlowchartOptions, oldData?: any) {
@@ -92,16 +94,32 @@ export class Flowchart {
   init() {
     const funcName = 'init';
     GFLog.debug(`${this.constructor.name}.${funcName}() : ${this.uid}`);
-    this.init_xgraph();
-    this.init_stateHandler();
+    // `init_xgraph` is async (it resolves the source, which may be a fetch).
+    // Track its completion so callers can await a fully built graph + states
+    // before driving the first data update (see `FlowchartHandler.whenReady`).
+    // The StateHandler is created inside `init_xgraph` once the graph (and its
+    // cells) exist, so a separate synchronous `init_stateHandler()` here would
+    // run before `this.xgraph` is assigned and create nothing.
+    this._ready = Promise.resolve(this.init_xgraph()).then(() => undefined);
     this.gf.events.connect('debug_asked', this, this._on_global_debug_asked.bind(this));
     this.events.emit('flowchart_initialized', this);
+  }
+
+  /** Resolves once this flowchart's graph and per-cell states are built. */
+  whenReady(): Promise<void> {
+    return this._ready;
   }
 
   update() {
     const funcName = 'refresh';
     GFLog.debug(`${this.constructor.name}.${funcName}() : ${this.uid}`);
     this.update_graph();
+    // Re-run the per-cell state application so a data/options update recolors
+    // the diagram from the current metrics. `data_processed` also drives this
+    // through the bus, but calling it here makes `FlowchartHandler.update()`
+    // (the data/options effect) deterministically refresh states even when the
+    // bus timing races the async graph build.
+    this.stateHandler?.update();
     this.events.emit('flowchart_updated', this);
   }
 
@@ -412,6 +430,13 @@ export class Flowchart {
         this.xgraph = new XGraph(this.container, this.data.type, content, this.gf.events);
         this.xgraph.events.connect('graph_changed', this, this._on_flowchart_graph_changed.bind(this));
         this.update_graph();
+        // The graph is now built with its cells available. Create the
+        // StateHandler here (one State per XCell) so the per-cell states
+        // subscribe to `data_processed` and recolor from live metrics. The
+        // outer `Flowchart.init()` ran `init_stateHandler()` synchronously
+        // before this async build resolved, when `this.xgraph` was still
+        // undefined, so this is the first point states can actually be created.
+        this.init_stateHandler();
         this.events.emit('graph_changed', this.xgraph);
       });
     } catch (error) {

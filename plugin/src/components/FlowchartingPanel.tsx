@@ -212,13 +212,20 @@ export function FlowchartingPanel(props: Props) {
   // handler's owned MetricHandler refreshes metrics; rule evaluation then
   // recolors the cells via the per-cell states (Req 7.8).
   useEffect(() => {
-    if (!handlerRef.current) {
+    const handler = handlerRef.current;
+    if (!handler) {
       return;
     }
     try {
       const dataList = dataFramesToDataList(data);
       gf.events.emit('data_updated', dataList);
-      handlerRef.current.update();
+      // The graph build (and thus the per-cell states) is async, so on the
+      // first data effect the states may not exist yet. Await the handler's
+      // readiness, then rebind metrics + refresh states so the first paint is
+      // colored from live data; `update()` is also called synchronously so
+      // later data ticks (states already built) recolor without the await.
+      handler.update();
+      void handler.whenReady();
       gf.clearNotify();
     } catch (e) {
       setMessage({ severity: 'error', text: String(e) });
