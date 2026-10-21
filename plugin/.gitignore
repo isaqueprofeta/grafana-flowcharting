@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+coverage/
+.eslintcache
+
+# IDE / OS
+.DS_Store
+*.log

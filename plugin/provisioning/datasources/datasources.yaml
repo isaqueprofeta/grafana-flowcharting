@@ -1,0 +1,15 @@
+apiVersion: 1
+
+# Provisioned Prometheus data source for the FlowCharting Demo_Stack (Req 9.4).
+# Grafana loads this automatically on startup -- no manual setup required.
+datasources:
+  - name: Prometheus
+    uid: flowcharting-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 1s

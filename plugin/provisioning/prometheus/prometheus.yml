@@ -1,0 +1,17 @@
+global:
+  # Scrape frequently so the demo metrics visibly cross thresholds over time.
+  scrape_interval: 5s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Synthetic infra topology (web -> app -> db) produced by metrics-generator.
+  - job_name: infra-topology
+    scrape_interval: 1s
+    static_configs:
+      - targets: ["metrics-generator:9090"]
+        labels:
+          env: demo

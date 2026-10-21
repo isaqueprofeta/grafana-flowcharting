@@ -1,0 +1,50 @@
+services:
+  grafana:
+    container_name: agenty-flowcharting-panel
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000/tcp"
+    volumes:
+      # Mount the built plugin for dev (unsigned / dev mode).
+      - ./dist:/var/lib/grafana/plugins/agenty-flowcharting-panel
+      # Grafana provisioning: datasources + dashboards (Req 9.4, 9.5, 9.7).
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      # Allow loading the unsigned plugin in dev mode.
+      - GF_DEFAULT_APP_MODE=development
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=agenty-flowcharting-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+  # Prometheus scrapes the synthetic metrics generator (Req 9.2).
+  prometheus:
+    container_name: flowcharting-prometheus
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090/tcp"
+    volumes:
+      - ./provisioning/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=1h"
+    depends_on:
+      - metrics-generator
+
+  # Synthetic infra topology (web -> app -> db) with up/latency/cpu metrics
+  # that cross thresholds over time (Req 9.3, 9.6). Pure Python stdlib, no
+  # install step -- keeps the stack reproducible from committed files alone.
+  metrics-generator:
+    container_name: flowcharting-metrics-generator
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./provisioning/metrics-generator:/app:ro
+    command: ["python", "generator.py"]
+    expose:
+      - "9090"

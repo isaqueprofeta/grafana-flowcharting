@@ -1,0 +1,17 @@
+{
+  "extends": ["@grafana/eslint-config"],
+  "root": true,
+  "rules": {
+    "react/prop-types": "off"
+  },
+  "overrides": [
+    {
+      "plugins": ["react-hooks"],
+      "files": ["src/**/*.{ts,tsx}"],
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn"
+      }
+    }
+  ]
+}
