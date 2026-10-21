@@ -21,9 +21,220 @@
   "panels": [
     {
       "datasource": { "type": "prometheus", "uid": "flowcharting-prometheus" },
-      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 0 },
       "id": 1,
-      "options": {},
+      "options": {
+        "flowcharts": [
+          {
+            "name": "Infrastructure",
+            "type": "xml",
+            "xml": "<mxGraphModel dx=\"640\" dy=\"420\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"640\" pageHeight=\"320\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"web\" value=\"web\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"40\" y=\"120\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"app\" value=\"app\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"260\" y=\"120\" width=\"120\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"db\" value=\"db\" style=\"shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffe6cc;strokeColor=#d79b00;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"480\" y=\"110\" width=\"100\" height=\"80\" as=\"geometry\"/></mxCell><mxCell id=\"e_web_app\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;\" edge=\"1\" parent=\"1\" source=\"web\" target=\"app\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell><mxCell id=\"e_app_db\" value=\"\" style=\"edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;\" edge=\"1\" parent=\"1\" source=\"app\" target=\"db\"><mxGeometry relative=\"1\" as=\"geometry\"/></mxCell></root></mxGraphModel>",
+            "csv": "",
+            "url": "",
+            "download": false,
+            "zoom": "100%",
+            "scale": true,
+            "center": true,
+            "lock": true,
+            "grid": false,
+            "enableAnim": true,
+            "tooltip": true,
+            "bgColor": null
+          },
+          {
+            "name": "Component detail",
+            "type": "xml",
+            "xml": "<mxGraphModel dx=\"640\" dy=\"420\" grid=\"1\" gridSize=\"10\" guides=\"1\" tooltips=\"1\" connect=\"1\" arrows=\"1\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"640\" pageHeight=\"360\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"web\" value=\"web\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"40\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"app\" value=\"app\" style=\"rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"60\" y=\"150\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"db\" value=\"db\" style=\"shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#ffe6cc;strokeColor=#d79b00;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"70\" y=\"260\" width=\"140\" height=\"80\" as=\"geometry\"/></mxCell><mxCell id=\"web_lat\" value=\"web latency\" style=\"whiteSpace=wrap;html=1;dashed=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"320\" y=\"40\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"app_cpu\" value=\"app cpu\" style=\"whiteSpace=wrap;html=1;dashed=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"320\" y=\"150\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"db_cpu\" value=\"db cpu\" style=\"whiteSpace=wrap;html=1;dashed=1;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"320\" y=\"270\" width=\"160\" height=\"60\" as=\"geometry\"/></mxCell></root></mxGraphModel>",
+            "csv": "",
+            "url": "",
+            "download": false,
+            "zoom": "100%",
+            "scale": true,
+            "center": true,
+            "lock": true,
+            "grid": false,
+            "enableAnim": true,
+            "tooltip": true,
+            "bgColor": null
+          }
+        ],
+        "rules": [
+          {
+            "order": 1,
+            "enabled": true,
+            "pattern": "up",
+            "metricType": "serie",
+            "alias": "Up / Down",
+            "refId": "A",
+            "column": "",
+            "aggregation": "current",
+            "type": "number",
+            "unit": "none",
+            "decimals": 0,
+            "dateColumn": "",
+            "dateFormat": "YYYY-MM-DD HH:mm:ss",
+            "numberThresholds": [
+              { "level": 0, "color": "#299c46", "comparator": "ge", "value": 1 }
+            ],
+            "stringThresholds": [],
+            "dateThresholds": [],
+            "invert": false,
+            "mappingType": 1,
+            "valueMaps": [
+              { "value": "0", "text": "DOWN", "hidden": false },
+              { "value": "1", "text": "UP", "hidden": false }
+            ],
+            "rangeMaps": [],
+            "shapeMaps": [
+              { "pattern": "web", "style": "fillColor", "colorOn": "a", "hidden": false },
+              { "pattern": "app", "style": "fillColor", "colorOn": "a", "hidden": false },
+              { "pattern": "db", "style": "fillColor", "colorOn": "a", "hidden": false }
+            ],
+            "textMaps": [
+              { "pattern": "web", "textReplace": "content", "textPattern": "/.*/", "textOn": "wmd", "hidden": false },
+              { "pattern": "app", "textReplace": "content", "textPattern": "/.*/", "textOn": "wmd", "hidden": false },
+              { "pattern": "db", "textReplace": "content", "textPattern": "/.*/", "textOn": "wmd", "hidden": false }
+            ],
+            "linkMaps": [],
+            "eventMaps": [],
+            "mapOptions": { "identByProp": "id", "metadata": "", "enableRegEx": false },
+            "tooltip": {
+              "enabled": true,
+              "label": "Availability",
+              "colors": true,
+              "on": "a",
+              "direction": "v",
+              "metadata": false,
+              "graph": false,
+              "graphType": "line",
+              "graphSize": "100%",
+              "graphScale": "linear",
+              "graphLow": null,
+              "graphHigh": null
+            },
+            "gradient": false,
+            "overlayIcon": true,
+            "sanitize": false
+          },
+          {
+            "order": 2,
+            "enabled": true,
+            "pattern": "latency",
+            "metricType": "serie",
+            "alias": "Request latency",
+            "refId": "B",
+            "column": "",
+            "aggregation": "current",
+            "type": "number",
+            "unit": "ms",
+            "decimals": 0,
+            "dateColumn": "",
+            "dateFormat": "YYYY-MM-DD HH:mm:ss",
+            "numberThresholds": [
+              { "level": 0, "color": "#299c46", "comparator": "ge", "value": 0 },
+              { "level": 1, "color": "#ed8128", "comparator": "ge", "value": 150 },
+              { "level": 2, "color": "#d44a3a", "comparator": "ge", "value": 400 }
+            ],
+            "stringThresholds": [],
+            "dateThresholds": [],
+            "invert": false,
+            "mappingType": 1,
+            "valueMaps": [],
+            "rangeMaps": [
+              { "from": "0", "to": "150", "text": "OK", "hidden": false },
+              { "from": "150", "to": "400", "text": "SLOW", "hidden": false },
+              { "from": "400", "to": "1000000", "text": "CRITICAL", "hidden": false }
+            ],
+            "shapeMaps": [
+              { "pattern": "web", "style": "strokeColor", "colorOn": "a", "hidden": false },
+              { "pattern": "app", "style": "strokeColor", "colorOn": "a", "hidden": false },
+              { "pattern": "db", "style": "strokeColor", "colorOn": "a", "hidden": false }
+            ],
+            "textMaps": [],
+            "linkMaps": [],
+            "eventMaps": [],
+            "mapOptions": { "identByProp": "id", "metadata": "", "enableRegEx": false },
+            "tooltip": {
+              "enabled": true,
+              "label": "Latency (ms)",
+              "colors": true,
+              "on": "a",
+              "direction": "v",
+              "metadata": false,
+              "graph": true,
+              "graphType": "line",
+              "graphSize": "200px",
+              "graphScale": "linear",
+              "graphLow": 0,
+              "graphHigh": null
+            },
+            "gradient": true,
+            "overlayIcon": false,
+            "sanitize": false
+          },
+          {
+            "order": 3,
+            "enabled": true,
+            "pattern": "cpu",
+            "metricType": "serie",
+            "alias": "CPU usage",
+            "refId": "C",
+            "column": "",
+            "aggregation": "current",
+            "type": "number",
+            "unit": "percent",
+            "decimals": 0,
+            "dateColumn": "",
+            "dateFormat": "YYYY-MM-DD HH:mm:ss",
+            "numberThresholds": [
+              { "level": 0, "color": "#299c46", "comparator": "ge", "value": 0 },
+              { "level": 1, "color": "#ed8128", "comparator": "ge", "value": 60 },
+              { "level": 2, "color": "#d44a3a", "comparator": "ge", "value": 85 }
+            ],
+            "stringThresholds": [],
+            "dateThresholds": [],
+            "invert": false,
+            "mappingType": 1,
+            "valueMaps": [],
+            "rangeMaps": [],
+            "shapeMaps": [
+              { "pattern": "web_lat", "style": "fillColor", "colorOn": "a", "hidden": false },
+              { "pattern": "app_cpu", "style": "fillColor", "colorOn": "a", "hidden": false },
+              { "pattern": "db_cpu", "style": "fillColor", "colorOn": "a", "hidden": false }
+            ],
+            "textMaps": [
+              { "pattern": "app_cpu", "textReplace": "content", "textPattern": "/.*/", "textOn": "wmd", "hidden": false },
+              { "pattern": "db_cpu", "textReplace": "content", "textPattern": "/.*/", "textOn": "wmd", "hidden": false }
+            ],
+            "linkMaps": [],
+            "eventMaps": [],
+            "mapOptions": { "identByProp": "id", "metadata": "", "enableRegEx": false },
+            "tooltip": {
+              "enabled": true,
+              "label": "CPU (%)",
+              "colors": true,
+              "on": "a",
+              "direction": "v",
+              "metadata": false,
+              "graph": true,
+              "graphType": "bar",
+              "graphSize": "200px",
+              "graphScale": "linear",
+              "graphLow": 0,
+              "graphHigh": 100
+            },
+            "gradient": true,
+            "overlayIcon": true,
+            "sanitize": false
+          }
+        ],
+        "editor": {
+          "editorUrl": "https://embed.diagrams.net/",
+          "editorTheme": "dark",
+          "allowDrawio": true
+        },
+        "inspect": { "enabled": true }
+      },
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "flowcharting-prometheus" },
@@ -68,7 +279,7 @@
           "unit": "none"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 11 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 13 },
       "id": 2,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
@@ -101,7 +312,7 @@
           "unit": "ms"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 11 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 13 },
       "id": 3,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
@@ -136,7 +347,7 @@
           "unit": "percent"
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 11 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 13 },
       "id": 4,
       "options": {
         "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
@@ -163,6 +374,6 @@
   "timezone": "",
   "title": "FlowCharting Demo - Infra Topology",
   "uid": "flowcharting-demo",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

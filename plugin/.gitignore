@@ -10,3 +10,14 @@ coverage/
 # IDE / OS
 .DS_Store
 *.log
+
+# Secrets / signing tokens -- never commit a Grafana Access Policy token (Req 10.5)
+.env
+.env.*
+*.token
+*.pem
+*.key
+
+# Signing / release artifacts
+*.zip
+*.zip.sha1

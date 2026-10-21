@@ -1,0 +1,74 @@
+name: Release
+
+# Publishes a signed plugin package to a GitHub release.
+#
+# Prerequisites (see SIGNING.md):
+#   - A repository secret named GRAFANA_ACCESS_POLICY_TOKEN holding a Grafana
+#     Cloud Access Policy token scoped `plugins:write`. The token is NEVER
+#     committed to the repository; it is injected at run time from secrets.
+#
+# Triggered by pushing a version tag (e.g. `v1.0.0`).
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      # Injected from the repository secret -- never a literal value.
+      GRAFANA_ACCESS_POLICY_TOKEN: ${{ secrets.GRAFANA_ACCESS_POLICY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: plugin/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: plugin
+
+      - name: Build plugin
+        run: npm run build
+        working-directory: plugin
+
+      - name: Sign plugin
+        run: npm run sign
+        working-directory: plugin
+
+      - name: Read plugin metadata
+        id: metadata
+        working-directory: plugin
+        run: |
+          export GRAFANA_PLUGIN_ID=$(cat dist/plugin.json | jq -r .id)
+          export GRAFANA_PLUGIN_VERSION=$(cat dist/plugin.json | jq -r .info.version)
+          export GRAFANA_PLUGIN_ARTIFACT=${GRAFANA_PLUGIN_ID}-${GRAFANA_PLUGIN_VERSION}.zip
+          echo "plugin-id=${GRAFANA_PLUGIN_ID}" >> "$GITHUB_OUTPUT"
+          echo "plugin-version=${GRAFANA_PLUGIN_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "archive=${GRAFANA_PLUGIN_ARTIFACT}" >> "$GITHUB_OUTPUT"
+
+      - name: Package plugin
+        id: package-plugin
+        working-directory: plugin
+        run: |
+          mv dist "${{ steps.metadata.outputs.plugin-id }}"
+          zip "${{ steps.metadata.outputs.archive }}" "${{ steps.metadata.outputs.plugin-id }}" -r
+          sha1sum "${{ steps.metadata.outputs.archive }}" | cut -f1 -d' ' > "${{ steps.metadata.outputs.archive }}.sha1"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            plugin/${{ steps.metadata.outputs.archive }}
+            plugin/${{ steps.metadata.outputs.archive }}.sha1
+          generate_release_notes: true
