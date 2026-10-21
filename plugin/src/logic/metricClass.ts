@@ -78,6 +78,22 @@ export class Metric {
   dataList: any;
   protected _nullPointMode = 'connected';
   protected _GHValue: string | number | null = null;
+  /**
+   * Whether a shared-crosshair hover is currently active. When `true`, the
+   * value a rule evaluates (`getValue`) is the hovered-timestamp value
+   * (`_GHValue`, from `findValue`) instead of the default aggregation — this is
+   * the legacy `$GF.hasGraphHover()` branch (see `src/metric_class.ts`
+   * `getValue`, commented out there because it relied on the `eval`-loaded
+   * singleton) reconnected through the React panel `eventBus` (Req 4.10).
+   */
+  protected _GHActive = false;
+  /**
+   * The hovered timestamp while `_GHActive` is `true`, kept so subtypes that
+   * resolve per-column (tables) can look up the hovered value for the exact
+   * column a rule asks for rather than only the default column captured in
+   * `_GHValue`.
+   */
+  protected _GHTimestamp: number | null = null;
   events: GFEvents<MetricSignals> = GFEvents.create(metricSignalsArray);
 
   constructor($gf: GFContext, dataList: any) {
@@ -109,6 +125,11 @@ export class Metric {
     return null;
   }
 
+  /** True while a shared-crosshair hover timestamp is being reflected. */
+  hasGraphHover(): boolean {
+    return this._GHActive;
+  }
+
   getData(_column?: string, _log = false): number[] | Array<{ x: number | Date; y: number }> {
     return [];
   }
@@ -125,8 +146,12 @@ export class Metric {
   update(timestamp?: number) {
     if (timestamp !== undefined) {
       this._GHValue = this.findValue(timestamp);
+      this._GHTimestamp = timestamp;
+      this._GHActive = true;
     } else {
       this._GHValue = null;
+      this._GHTimestamp = null;
+      this._GHActive = false;
     }
     this.events.emit('metric_updated', this);
   }
@@ -206,6 +231,15 @@ export class SerieMetric extends Metric {
 
   getValue(aggregator: Aggregation, _column: string = this.name): string | number | null {
     try {
+      // Shared-crosshair hover branch (Req 4.10): while a hover timestamp is
+      // active, a rule evaluates the value at that timestamp (`findValue`,
+      // nearest-not-after) rather than the default aggregation. This is the
+      // legacy `$GF.hasGraphHover()` branch from `src/metric_class.ts`
+      // `getValue`, reconnected through the React panel `eventBus` and reset by
+      // `update(undefined)` on crosshair-clear.
+      if (this._GHActive) {
+        return this._GHValue;
+      }
       const value: string | number | null = this.metrics.stats[aggregator];
       return value;
     } catch (error) {
@@ -470,6 +504,12 @@ export class TableMetric extends Metric {
 
   getValue(aggregator: Aggregation, column = 'Value'): string | number | null {
     try {
+      // Shared-crosshair hover branch (Req 4.10): resolve the hovered-timestamp
+      // value for the requested column (nearest-not-after) instead of the
+      // aggregation. Reset by `update(undefined)` on crosshair-clear.
+      if (this._GHActive && this._GHTimestamp !== null) {
+        return this.findValue(this._GHTimestamp, column);
+      }
       const value: string | number | null = this.metrics.stats[column][aggregator];
       return value;
     } catch (error) {
@@ -482,7 +522,7 @@ export class TableMetric extends Metric {
    * find a value by a timestamp — nearest-not-after binary search over the
    * table datapoints. Preserved verbatim (Req 4.10).
    */
-  findValue(timestamp: number, column: string): string | number | null {
+  findValue(timestamp: number, column: string = this.tableColumn): string | number | null {
     let low = 0;
     let high = this.metrics.datapoints.length - 1;
     let found = !(high > 0 && this.metrics.datapoints[low][this.metrics.timeColumn] < timestamp);

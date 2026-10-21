@@ -27,6 +27,7 @@
  * mutation.
  */
 import { XGraph, XCell } from './XGraph';
+import { TooltipHandler as TooltipHandlerImpl } from './tooltipHandler';
 import { Rule } from '../logic/rule';
 import { EventMap } from '../logic/mapping';
 import { GFCONSTANT, GFLog, GFVariables, genUid, getCurrentDate } from '../logic/globals';
@@ -1049,13 +1050,13 @@ class TooltipState extends GFState {
   }
 
   /**
-   * Factory for the per-cell TooltipHandler. Task 11 ports the concrete
-   * `TooltipHandler` (with sparkline) and supplies it here. Until then this
-   * throws if a rule actually requests a tooltip, so the gap is explicit rather
-   * than silently swallowed.
+   * Factory for the per-cell TooltipHandler. Task 11 ported the concrete
+   * `TooltipHandler` (with an inline-SVG sparkline) into `engine/tooltipHandler`;
+   * it satisfies the forward-declared `TooltipHandlerLike` contract, so the
+   * state-application algorithm drives it unchanged.
    */
   private static _createTooltipHandler(): TooltipHandler {
-    throw new Error('TooltipHandler is ported in Task 11');
+    return new TooltipHandlerImpl();
   }
 
   async apply(key?: string) {

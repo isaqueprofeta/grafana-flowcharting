@@ -34,17 +34,45 @@
  *
  * No `$GF`, `$scope`, Angular, `grafana/app`, `globalThis`, or `mx*` coupling.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PanelProps } from '@grafana/data';
 import { css, cx } from '@emotion/css';
-import { Alert, useStyles2, useTheme2 } from '@grafana/ui';
+import { Alert, Button, useStyles2, useTheme2 } from '@grafana/ui';
 import { FlowchartingOptions } from '../types/options';
 import { useGFContext, GFContext, PanelMessage } from './context/GFContext';
 import { FlowchartHandler } from '../logic/flowchartHandler';
 import { dataFramesToDataList } from '../data/dataFrameAdapter';
+import { DrawioEditor } from '../drawio/DrawioEditor';
 import type { LogicContext } from '../logic/logicContext';
 
 interface Props extends PanelProps<FlowchartingOptions> {}
+
+/**
+ * Pure helper (Req 6.4): return a new {@link FlowchartingOptions} with the
+ * Diagram_XML of the flowchart at `activeIndex` replaced by `xml`. All other
+ * flowcharts and the top-level options are preserved by identity-free copy so
+ * the options effect (keyed on `props.options`) observes a changed reference
+ * and re-renders (Req 6.5).
+ *
+ * When `activeIndex` is out of range (e.g. no flowcharts configured) the
+ * options are returned unchanged — there is nothing to write into.
+ *
+ * Exported so the save path can be unit-tested without a draw.io window.
+ */
+export function writeSavedXml(
+  options: FlowchartingOptions,
+  activeIndex: number,
+  xml: string
+): FlowchartingOptions {
+  const flowcharts = options.flowcharts ?? [];
+  if (activeIndex < 0 || activeIndex >= flowcharts.length) {
+    return options;
+  }
+  return {
+    ...options,
+    flowcharts: flowcharts.map((fc, i) => (i === activeIndex ? { ...fc, xml } : fc)),
+  };
+}
 
 /**
  * Adapt the React {@link GFContext} into a {@link LogicContext}. The seam
@@ -82,11 +110,17 @@ const getStyles = () => {
       width: 100%;
       height: 100%;
     `,
+    toolbar: css`
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      z-index: 1;
+    `,
   };
 };
 
 export function FlowchartingPanel(props: Props) {
-  const { width, height, data, timeRange, options } = props;
+  const { id, width, height, data, timeRange, options, onOptionsChange } = props;
   const styles = useStyles2(getStyles);
   const theme = useTheme2();
   const [message, setMessage] = useState<PanelMessage | null>(null);
@@ -95,9 +129,59 @@ export function FlowchartingPanel(props: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   // The FlowchartHandler orchestrator (owns flowcharts/rules/metrics, Task 8.2).
   const handlerRef = useRef<FlowchartHandler | null>(null);
+  // The open draw.io editor session, if any (Task 12.2). Held through a ref so
+  // the unmount cleanup can close it (detaching its message listener).
+  const editorRef = useRef<DrawioEditor | null>(null);
+
+  // Keep the latest options available to the (stable) save callback without
+  // re-subscribing the editor's message listener on every options change.
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Context_Seam built from the live props/theme/message setter.
   const gf = useGFContext(props, theme, setMessage);
+
+  // Save handler (Req 6.4, 6.5): write the saved Diagram_XML into the active
+  // flowchart's options via `onOptionsChange`. Reading `options` from the ref
+  // keeps this callback stable while always writing into the current options;
+  // the resulting new reference drives the options effect -> re-render (Req 6.5).
+  const handleSave = useCallback(
+    (xml: string) => {
+      const current = optionsRef.current;
+      const activeIndex = handlerRef.current?.getCurrentIndex() ?? 0;
+      const next = writeSavedXml(current, activeIndex, xml);
+      if (next !== current) {
+        onOptionsChange(next);
+      }
+    },
+    [onOptionsChange]
+  );
+
+  // Open the draw.io editor for the active flowchart (Req 6.1 seam). Closes any
+  // previously-open session first, then seeds the editor with the active
+  // flowchart's current XML and the configured editor URL/theme.
+  const openEditor = useCallback(() => {
+    editorRef.current?.close();
+    const current = optionsRef.current;
+    const activeIndex = handlerRef.current?.getCurrentIndex() ?? 0;
+    const flowchart = (current.flowcharts ?? [])[activeIndex];
+    const editor = new DrawioEditor(
+      {
+        uid: String(id),
+        xml: flowchart?.xml ?? '',
+        editorUrl: current.editor?.editorUrl,
+        editorTheme: current.editor?.editorTheme,
+      },
+      {
+        onSave: handleSave,
+        onExit: () => {
+          editorRef.current = null;
+        },
+      }
+    );
+    editorRef.current = editor;
+    editor.open();
+  }, [id, handleSave]);
 
   // Mount: init the FlowchartHandler (metrics + rules + flowcharts) once;
   // release all resources on unmount (Req 7.8).
@@ -112,6 +196,9 @@ export function FlowchartingPanel(props: Props) {
       setMessage({ severity: 'error', text: String(e) });
     }
     return () => {
+      // Close any open draw.io editor so its message listener is detached (Req 7.8).
+      editorRef.current?.close();
+      editorRef.current = null;
       handlerRef.current?.free();
       handlerRef.current = null;
       gf.events.clear();
@@ -193,6 +280,19 @@ export function FlowchartingPanel(props: Props) {
     >
       {message && (
         <Alert severity={message.severity} title={message.text} onRemove={() => setMessage(null)} />
+      )}
+      {options.editor?.allowDrawio && (
+        <div className={styles.toolbar}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="pen"
+            onClick={openEditor}
+            data-testid="flowcharting-edit-diagram"
+          >
+            Edit diagram
+          </Button>
+        </div>
       )}
       <div ref={containerRef} className={styles.container} data-testid="flowcharting-panel-content" />
     </div>
